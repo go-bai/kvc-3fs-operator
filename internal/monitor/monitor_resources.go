@@ -267,7 +267,11 @@ func (mc *MonitorConfig) WithDeploySpec() *MonitorConfig {
 	}
 
 	replicaNum := int32(1)
-	mc.DeployConfig = mc.DeployConfig.WithDeploySpec(deployLabels, podLabels, replicaNum, true, nodemaps, appsv1.RollingUpdateDeploymentStrategyType)
+	hostNetwork := false
+	if utils.GetUseHostNetworkEnv() {
+		hostNetwork = true
+	}
+	mc.DeployConfig = mc.DeployConfig.WithDeploySpec(deployLabels, podLabels, replicaNum, hostNetwork, nodemaps, appsv1.RollingUpdateDeploymentStrategyType)
 	return mc
 }
 
