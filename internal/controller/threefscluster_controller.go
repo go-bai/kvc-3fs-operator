@@ -106,7 +106,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		threeFsCluster.Spec.Clickhouse.Resources, r.Client)
 	monConfig := monitor.NewMonitorConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Spec.Clickhouse.Nodes, threeFsCluster.Spec.Clickhouse.UseEcsClickhouse,
-		threeFsCluster.Spec.Monitor.Port, threeFsCluster.Spec.Monitor.Resources, r.Client, chCongig)
+		threeFsCluster.Spec.Monitor.Port, threeFsCluster.Spec.Monitor.Resources, r.Client, chCongig, threeFsCluster.Spec.FilterList)
 
 	fdbConfig := fdb.NewFdbConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Spec.Fdb.StorageReplicas, threeFsCluster.Spec.Fdb.ClusterSize,
@@ -151,9 +151,9 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if threeFsCluster.DeletionTimestamp == nil {
 		// tag mgmtd first for mgmtd server address
 		var mgmtdNodes []string
+		useHostNetwork := utils.GetUseHostNetworkEnv()
 		if !threeFsCluster.Status.TagMgmtd {
 			mgmtdNodes = mgmtdConfig.Nodes[:mgmtdConfig.Replica]
-			useHostNetwork := utils.GetUseHostNetworkEnv()
 			if useHostNetwork {
 				mgmtdAddresses = r.ParseMgmtdAddresses(threeFsCluster.Name, threeFsCluster.Namespace, mgmtdNodes)
 			} else {
@@ -174,6 +174,12 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 			klog.Infof("tag mgmtd node success")
 		} else {
+			if !useHostNetwork {
+				if err := mgmtdConfig.TagNodeLabel(nil); err != nil {
+					return ctrl.Result{}, err
+				}
+				klog.Infof("tag mgmtd node success")
+			}
 			mgmtdAddresses = threeFsCluster.Status.MgmtdAddresses
 		}
 		klog.Infof("mgmtdAddresses is: %v", mgmtdAddresses)
@@ -333,7 +339,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		klog.Infof("fdb configmap & deploy created")
 
-		if err := r.RenderMainConfigPhase1(monConfig, fdbConfig, mgmtdConfig); err != nil {
+		if err := r.RenderMainConfigPhase1(monConfig, fdbConfig, mgmtdConfig, threeFsCluster.Spec.FilterList); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -433,7 +439,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		klog.Infof("mgmtd configmap & deploy created")
 
-		if err := r.RenderMainConfigPhase2(monConfig, metaConfig, storageConfig, mgmtdAddresses); err != nil {
+		if err := r.RenderMainConfigPhase2(monConfig, metaConfig, storageConfig, mgmtdAddresses, threeFsCluster.Spec.FilterList); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -495,7 +501,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 
-		for _, storageNode := range threeFsCluster.Spec.Storage.Nodes {
+		for _, storageNode := range threeFsCluster.Status.NodesInfo.StorageNodes {
 			if !CheckComponentExist(adminCliConfig, "STORAGE", storageNode) {
 				klog.Infof("storage %s not connected yet, requeue after 20s", storageNode)
 				return ctrl.Result{RequeueAfter: time.Second * 20}, nil

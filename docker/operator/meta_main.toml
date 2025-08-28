@@ -209,7 +209,7 @@ max_connections = 1
 
 [server.base.groups.listener]
 domain_socket_index = 1
-filter_list = []
+filter_list = {{ .filter_list }}
 listen_port = {{ .rdma_port }}
 listen_queue_depth = 4096
 rdma_accept_timeout = '15s'
@@ -267,7 +267,7 @@ max_connections = 1
 
 [server.base.groups.listener]
 domain_socket_index = 1
-filter_list = []
+filter_list = {{ .filter_list }}
 listen_port = {{ .tcp_port }}
 listen_queue_depth = 4096
 rdma_accept_timeout = '15s'

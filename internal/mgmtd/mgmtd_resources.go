@@ -63,19 +63,81 @@ func GetMgmtdDeployName(name string) string {
 }
 
 func (mc *MgmtdConfig) TagNodeLabel(nodes []string) error {
-	for _, node := range nodes {
-		nodeObj := &corev1.Node{}
-		if err := mc.rclient.Get(context.Background(), client.ObjectKey{Name: node}, nodeObj); err != nil {
-			klog.Errorf("get node %s failed: %v", node, err)
-			return err
+	if nodes != nil && len(nodes) != 0 {
+		for _, node := range nodes {
+			nodeObj := &corev1.Node{}
+			if err := mc.rclient.Get(context.Background(), client.ObjectKey{Name: node}, nodeObj); err != nil {
+				klog.Errorf("get node %s failed: %v", node, err)
+				return err
+			}
+			newnodeObj := nodeObj.DeepCopy()
+			newnodeObj.Labels[constant.ThreeFSMgmtdNodeKey] = "true"
+			if err := mc.rclient.Patch(context.Background(), newnodeObj, client.MergeFrom(nodeObj)); err != nil {
+				klog.Errorf("patch node %s failed: %v", node, err)
+				return err
+			}
 		}
-		newnodeObj := nodeObj.DeepCopy()
-		newnodeObj.Labels[constant.ThreeFSMgmtdNodeKey] = "true"
-		if err := mc.rclient.Patch(context.Background(), newnodeObj, client.MergeFrom(nodeObj)); err != nil {
-			klog.Errorf("patch node %s failed: %v", node, err)
+		return nil
+	}
+
+	klog.Infof("start tag node with mgmtd label")
+	tagNodeList := &corev1.NodeList{}
+	if err := mc.rclient.List(context.Background(), tagNodeList, client.MatchingLabels{constant.ThreeFSMgmtdNodeKey: "true"}); err != nil && !k8serror.IsNotFound(err) {
+		klog.Errorf("list node with mgmtd label failed: %v", err)
+		return err
+	}
+	if len(tagNodeList.Items) == mc.Replica {
+		klog.Infof("node num with mgmtd label already satisfy in k8s cluster")
+		return nil
+	} else if len(tagNodeList.Items) > mc.Replica {
+		// delete one each time
+		times := len(tagNodeList.Items) - mc.Replica
+		klog.Infof("node num with mgmtd label exceed replica(%d) in k8s cluster", mc.Replica)
+		node := tagNodeList.Items[0]
+		delete(node.Labels, constant.ThreeFSMgmtdNodeKey)
+		if err := mc.rclient.Update(context.Background(), &node); err != nil {
+			klog.Errorf("delete node %s mgmtd label failed: %v", node.Name, err)
 			return err
+		} else {
+			klog.Infof("delete node %s mgmtd lebel success", node.Name)
+			times--
+			if times == 0 {
+				return nil
+			}
+		}
+	} else {
+		klog.Infof("node num with mgmtd label less than replica(%d) in k8s cluster", mc.Replica)
+	}
+
+	allNodeList := &corev1.NodeList{}
+	if err := mc.rclient.List(context.Background(), allNodeList); err != nil {
+		klog.Errorf("list node failed: %v", err)
+		return err
+	}
+
+	times := len(tagNodeList.Items)
+	for _, node := range allNodeList.Items {
+		klog.Infof("node name is: %s", node.Name)
+		if !utils.StrListContains(mc.Nodes, node.Name) {
+			continue
+		}
+		if _, ok := node.Labels[constant.ThreeFSMgmtdNodeKey]; ok {
+			continue
+		}
+		klog.Infof("tag node %s with mgmtd lebel", node.Name)
+		node.Labels[constant.ThreeFSMgmtdNodeKey] = "true"
+		if err := mc.rclient.Update(context.Background(), &node); err != nil {
+			klog.Errorf("update node %s failed: %v", node.Name, err)
+			return err
+		} else {
+			klog.Infof("tag node %s with mgmtd lebel success", node.Name)
+			times += 1
+			if times == mc.Replica {
+				break
+			}
 		}
 	}
+
 	return nil
 }
 

@@ -2,7 +2,7 @@ apiVersion: threefs.aliyun.com/v1
 kind: ThreeFsCluster
 metadata:
   labels:
-    threefs.aliyun.com/debug-mod: "true"
+    threefs.aliyun.com/debug-mode: "true"
   name: tfsc-sample
 spec:
   chainTableId: "1" # 此处当前固定设置

@@ -61,8 +61,6 @@ spec:
                   type: string
                 type: array
               threeFsClusterName:
-                description: Foo is an example field of ThreeFsChainTable. Edit Threefschaintable_types.go
-                  to remove/update
                 type: string
               threeFsClusterNamespace:
                 type: string

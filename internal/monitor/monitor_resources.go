@@ -29,9 +29,18 @@ type MonitorConfig struct {
 	DeployConfig *native_resources.DelpoyConfig
 	SvcConfig    *native_resources.ServiceConfig
 	rclient      client.Client
+	FilterList   []string
 }
 
-func NewMonitorConfig(name, namespace string, nodes []string, isEcs bool, port int, resources corev1.ResourceRequirements, rclient client.Client, chConfig *clickhouse.ClickhouseConfig) *MonitorConfig {
+func NewMonitorConfig(name, namespace string, nodes []string, isEcs bool, port int,
+	resources corev1.ResourceRequirements, rclient client.Client, chConfig *clickhouse.ClickhouseConfig,
+	filterList []string) *MonitorConfig {
+	if filterList == nil {
+		filterList = make([]string, 0)
+	}
+	for i := 0; i < len(filterList); i++ {
+		filterList[i] = fmt.Sprintf(`"%s"`, filterList[i])
+	}
 	return &MonitorConfig{
 		Name:         name,
 		Namespace:    namespace,
@@ -43,6 +52,7 @@ func NewMonitorConfig(name, namespace string, nodes []string, isEcs bool, port i
 		DeployConfig: native_resources.NewDeployConfig(),
 		SvcConfig:    native_resources.NewServiceConfig(),
 		rclient:      rclient,
+		FilterList:   filterList,
 	}
 }
 
@@ -248,7 +258,7 @@ func (mc *MonitorConfig) WithDeploySpec() *MonitorConfig {
 	}
 
 	replicaNum := int32(1)
-	mc.DeployConfig = mc.DeployConfig.WithDeploySpec(deployLabels, podLabels, replicaNum, false, nodemaps, appsv1.RollingUpdateDeploymentStrategyType)
+	mc.DeployConfig = mc.DeployConfig.WithDeploySpec(deployLabels, podLabels, replicaNum, true, nodemaps, appsv1.RollingUpdateDeploymentStrategyType)
 	return mc
 }
 
@@ -332,6 +342,10 @@ func (mc *MonitorConfig) WithContainers() *MonitorConfig {
 			Name:  "COMPONENT",
 			Value: "monitor",
 		},
+		//{
+		//	Name:  "FILTER_LIST",
+		//	Value: fmt.Sprintf(`[%s]`, strings.Join(mc.FilterList, ", ")),
+		//},
 	}
 
 	volumeMount := []corev1.VolumeMount{

@@ -86,6 +86,7 @@ type ThreeFsClusterSpec struct {
 	StripeSize   int            `json:"stripeSize"`
 	ChainTableId string         `json:"chainTableId"`
 	ChunkSize    int            `json:"chunkSize"`
+	FilterList   []string       `json:"filterList,omitempty"`
 	Fdb          FdbSpec        `json:"fdb"`
 	Clickhouse   ClickhouseSpec `json:"clickhouse"`
 	Monitor      MonitorSpec    `json:"monitor"`

@@ -210,6 +210,10 @@ spec:
                   storageReplicas:
                     type: integer
                 type: object
+              filterList:
+                items:
+                  type: string
+                type: array
               meta:
                 properties:
                   nodes:

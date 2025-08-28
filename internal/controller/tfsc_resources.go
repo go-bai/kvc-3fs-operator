@@ -139,22 +139,35 @@ func (r *ThreeFsClusterReconciler) ParseTargetPaths(storage *storage.StorageConf
 	return fmt.Sprintf("[%s]", strings.Join(targetPathList, ", "))
 }
 
-func (r *ThreeFsClusterReconciler) RenderMainConfigPhase1(monConfig *monitor.MonitorConfig, fdbConfig *fdb.FdbConfig, mgmtdConfig *mgmtd.MgmtdConfig) error {
+func (r *ThreeFsClusterReconciler) RenderMainConfigPhase1(monConfig *monitor.MonitorConfig,
+	fdbConfig *fdb.FdbConfig, mgmtdConfig *mgmtd.MgmtdConfig, filterList []string) error {
+	if filterList == nil {
+		filterList = make([]string, 0)
+	}
+	for i := 0; i < len(filterList); i++ {
+		filterList[i] = fmt.Sprintf(`"%s"`, filterList[i])
+	}
 	if err := r.RenderFdbConfig(fdbConfig); err != nil {
 		return err
 	}
-	if err := r.RenderMgmtdMainConfig(monConfig, mgmtdConfig); err != nil {
+	if err := r.RenderMgmtdMainConfig(monConfig, mgmtdConfig, filterList); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *ThreeFsClusterReconciler) RenderMainConfigPhase2(monConfig *monitor.MonitorConfig,
-	metaConfig *meta.MetaConfig, storageConfig *storage.StorageConfig, mgmtdAddresses string) error {
-	if err := r.RenderMetaMainConfig(monConfig, mgmtdAddresses, metaConfig); err != nil {
+	metaConfig *meta.MetaConfig, storageConfig *storage.StorageConfig, mgmtdAddresses string, filterList []string) error {
+	if filterList == nil {
+		filterList = make([]string, 0)
+	}
+	for i := 0; i < len(filterList); i++ {
+		filterList[i] = fmt.Sprintf(`"%s"`, filterList[i])
+	}
+	if err := r.RenderMetaMainConfig(monConfig, mgmtdAddresses, metaConfig, filterList); err != nil {
 		return err
 	}
-	if err := r.RenderStorageMainConfig(monConfig, mgmtdAddresses, storageConfig); err != nil {
+	if err := r.RenderStorageMainConfig(monConfig, mgmtdAddresses, storageConfig, filterList); err != nil {
 		return err
 	}
 	if err := r.RenderFuseMainConfig(monConfig, mgmtdAddresses); err != nil {
@@ -181,7 +194,8 @@ func (r *ThreeFsClusterReconciler) RenderFdbConfig(fdbconfig *fdb.FdbConfig) err
 	return err
 }
 
-func (r *ThreeFsClusterReconciler) RenderMgmtdMainConfig(monConfig *monitor.MonitorConfig, mgmtdConfig *mgmtd.MgmtdConfig) error {
+func (r *ThreeFsClusterReconciler) RenderMgmtdMainConfig(monConfig *monitor.MonitorConfig,
+	mgmtdConfig *mgmtd.MgmtdConfig, filterList []string) error {
 	mgmtdTempConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSMgmtdTempMain)
 	mgmtdConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSMgmtdMain)
 	os.RemoveAll(mgmtdConfigPath)
@@ -203,9 +217,10 @@ func (r *ThreeFsClusterReconciler) RenderMgmtdMainConfig(monConfig *monitor.Moni
 			return err
 		}
 		maps := map[string]string{
-			"remote_ip": fmt.Sprintf("%s:%d", ip, monConfig.Port),
-			"rdma_port": strconv.Itoa(mgmtdConfig.RdmaPort),
-			"tcp_port":  strconv.Itoa(mgmtdConfig.TcpPort),
+			"remote_ip":   fmt.Sprintf("%s:%d", ip, monConfig.Port),
+			"rdma_port":   strconv.Itoa(mgmtdConfig.RdmaPort),
+			"tcp_port":    strconv.Itoa(mgmtdConfig.TcpPort),
+			"filter_list": fmt.Sprintf("[%s]", strings.Join(filterList, ", ")),
 		}
 		mcfile.Seek(0, io.SeekStart)
 		return tmpl.Execute(mcfile, maps)
@@ -213,7 +228,8 @@ func (r *ThreeFsClusterReconciler) RenderMgmtdMainConfig(monConfig *monitor.Moni
 	return nil
 }
 
-func (r *ThreeFsClusterReconciler) RenderMetaMainConfig(monConfig *monitor.MonitorConfig, mgmtdAddresses string, metaConfig *meta.MetaConfig) error {
+func (r *ThreeFsClusterReconciler) RenderMetaMainConfig(monConfig *monitor.MonitorConfig,
+	mgmtdAddresses string, metaConfig *meta.MetaConfig, filterList []string) error {
 	metaTempConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSMetaTempMain)
 	metaConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSMetaMain)
 
@@ -241,6 +257,7 @@ func (r *ThreeFsClusterReconciler) RenderMetaMainConfig(monConfig *monitor.Monit
 			"rdma_port":              strconv.Itoa(metaConfig.RdmaPort),
 			"tcp_port":               strconv.Itoa(metaConfig.TcpPort),
 			"enable_trace":           strconv.FormatBool(utils.GetEnableTraceEnv()),
+			"filter_list":            fmt.Sprintf("[%s]", strings.Join(filterList, ", ")),
 		}
 		mcfile.Seek(0, io.SeekStart)
 		return tmpl.Execute(mcfile, maps)
@@ -248,7 +265,8 @@ func (r *ThreeFsClusterReconciler) RenderMetaMainConfig(monConfig *monitor.Monit
 	return nil
 }
 
-func (r *ThreeFsClusterReconciler) RenderStorageMainConfig(monConfig *monitor.MonitorConfig, mgmtdAddresses string, storageConfig *storage.StorageConfig) error {
+func (r *ThreeFsClusterReconciler) RenderStorageMainConfig(monConfig *monitor.MonitorConfig,
+	mgmtdAddresses string, storageConfig *storage.StorageConfig, filterList []string) error {
 	storageTempConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSStorageTempMain)
 	storageConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSStorageMain)
 
@@ -277,6 +295,7 @@ func (r *ThreeFsClusterReconciler) RenderStorageMainConfig(monConfig *monitor.Mo
 			"rdma_port":              strconv.Itoa(storageConfig.RdmaPort),
 			"tcp_port":               strconv.Itoa(storageConfig.TcpPort),
 			"enable_trace":           strconv.FormatBool(utils.GetEnableTraceEnv()),
+			"filter_list":            fmt.Sprintf("[%s]", strings.Join(filterList, ", ")),
 		}
 		mcfile.Seek(0, io.SeekStart)
 		return tmpl.Execute(mcfile, maps)
@@ -688,11 +707,11 @@ func (r *ThreeFsClusterReconciler) UpdateClusterStatus(adminCli *clientcomm.Admi
 						newNodeName := SelectOneNodeWithLabelKey(nodeName, constant.ThreeFSMgmtdNodeKey, rclient)
 						if newNodeName == "" {
 							klog.Errorf("select one node with label %s failed", constant.ThreeFSMgmtdNodeKey)
-							return err
+						} else {
+							klog.Infof("select one node with label %s success, new node is %s", constant.ThreeFSMgmtdNodeKey, newNodeName)
 						}
-						klog.Infof("select one node with label %s success, new node is %s", constant.ThreeFSMgmtdNodeKey, newNodeName)
-						adminCli.UnregisterNode(node.Id, node.Type)
 					}
+					adminCli.UnregisterNode(node.Id, node.Type)
 				} else if node.Type == "META" {
 					if _, ok := nodeObj.Labels[constant.ThreeFSMetaNodeKey]; ok {
 						delete(nodeObj.Labels, constant.ThreeFSMetaNodeKey)
@@ -703,10 +722,10 @@ func (r *ThreeFsClusterReconciler) UpdateClusterStatus(adminCli *clientcomm.Admi
 						klog.Infof("remove node %s with meta node label success", nodeName)
 						newNodeName := SelectOneNodeWithLabelKey(nodeName, constant.ThreeFSMetaNodeKey, rclient)
 						if newNodeName == "" {
-							klog.Errorf("select one node with label %s failed", constant.ThreeFSMetaNodeKey)
-							return err
+							klog.Errorf("select one node with label %s failed", constant.ThreeFSMgmtdNodeKey)
+						} else {
+							klog.Infof("select one node with label %s success, new node is %s", constant.ThreeFSMgmtdNodeKey, newNodeName)
 						}
-						klog.Infof("select one node with label %s success, new node is %s", constant.ThreeFSMetaNodeKey, newNodeName)
 					}
 					adminCli.UnregisterNode(node.Id, node.Type)
 				}
