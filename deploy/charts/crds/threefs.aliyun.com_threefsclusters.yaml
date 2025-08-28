@@ -133,6 +133,10 @@ spec:
                 - tcpPort
                 - user
                 type: object
+              deviceFilter:
+                items:
+                  type: string
+                type: array
               fdb:
                 properties:
                   clusterSize:

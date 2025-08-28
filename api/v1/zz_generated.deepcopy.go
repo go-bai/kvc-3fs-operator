@@ -401,6 +401,11 @@ func (in *ThreeFsClusterSpec) DeepCopyInto(out *ThreeFsClusterSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.DeviceFilter != nil {
+		in, out := &in.DeviceFilter, &out.DeviceFilter
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.Fdb.DeepCopyInto(&out.Fdb)
 	in.Clickhouse.DeepCopyInto(&out.Clickhouse)
 	in.Monitor.DeepCopyInto(&out.Monitor)

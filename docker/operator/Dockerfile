@@ -22,6 +22,7 @@ COPY ./docker/operator/storage_main.toml /opt/3fs/etc/storage_main_temp.toml
 COPY ./docker/operator/hf3fs_fuse_main.toml /opt/3fs/etc/hf3fs_fuse_main_temp.toml
 COPY ./docker/operator/data_placement.py /opt/3fs/data_placement/data_placement.py
 COPY ./docker/operator/gen_chain_table.py /opt/3fs/data_placement/gen_chain_table.py
+COPY ./docker/operator/admin_cli.toml /opt/3fs/etc/admin_cli_temp.toml
 
 RUN chmod +x /tfsc-operator
 

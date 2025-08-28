@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type MgmtdConfig struct {
@@ -32,9 +33,19 @@ type MgmtdConfig struct {
 	SvcConfig      *native_resources.ServiceConfig
 	Deploys        map[string]*native_resources.DelpoyConfig
 	rclient        client.Client
+	DeviceFilter   []string
 }
 
-func NewMgmtdConfig(name, namespace string, nodes []string, RdmaPort, Tcpport, replica int, resources corev1.ResourceRequirements, fdbConfig *fdb.FdbConfig, rclient client.Client) *MgmtdConfig {
+func NewMgmtdConfig(name, namespace string, nodes []string, RdmaPort, Tcpport, replica int,
+	resources corev1.ResourceRequirements, fdbConfig *fdb.FdbConfig, rclient client.Client,
+	deviceFilter []string) *MgmtdConfig {
+
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf("\"%s\"", deviceFilter[i])
+	}
 
 	deploys := make(map[string]*native_resources.DelpoyConfig)
 	for _, node := range nodes {
@@ -43,18 +54,19 @@ func NewMgmtdConfig(name, namespace string, nodes []string, RdmaPort, Tcpport, r
 
 	sort.Strings(nodes)
 	return &MgmtdConfig{
-		Name:      name,
-		Namespace: namespace,
-		RdmaPort:  RdmaPort,
-		TcpPort:   Tcpport,
-		Replica:   replica,
-		Nodes:     nodes,
-		Resources: resources,
-		FdbConfig: fdbConfig,
-		DsConfig:  native_resources.NewDsConfig(),
-		SvcConfig: native_resources.NewServiceConfig(),
-		Deploys:   deploys,
-		rclient:   rclient,
+		Name:         name,
+		Namespace:    namespace,
+		RdmaPort:     RdmaPort,
+		TcpPort:      Tcpport,
+		Replica:      replica,
+		Nodes:        nodes,
+		Resources:    resources,
+		FdbConfig:    fdbConfig,
+		DsConfig:     native_resources.NewDsConfig(),
+		SvcConfig:    native_resources.NewServiceConfig(),
+		Deploys:      deploys,
+		rclient:      rclient,
+		DeviceFilter: deviceFilter,
 	}
 }
 
@@ -460,6 +472,10 @@ func (mc *MgmtdConfig) WithDeployContainers(nodeName string) *MgmtdConfig {
 		{
 			Name:  "MGMTD_SERVER_ADDRESS",
 			Value: mc.MgmtdAddresses,
+		},
+		{
+			Name:  "DEVICE_FILTER",
+			Value: strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(mc.DeviceFilter, ", ")), "\"\"", "\""),
 		},
 	}
 

@@ -103,6 +103,10 @@ func (r *ThreeFsChainTableReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	adminCliConfig := clientcomm.NewAdminCli(vfsc.Status.MgmtdAddresses,
 		filepath.Join(constant.DefaultConfigPath, constant.ThreeFSAdminCliMain))
 
+	if err := RenderAdminConfig(vfsc.Spec.DeviceFilter); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// for add/replace, need to check storage process status
 	if threefsChanintable.Spec.NewNode != nil {
 		for _, newnode := range threefsChanintable.Spec.NewNode {

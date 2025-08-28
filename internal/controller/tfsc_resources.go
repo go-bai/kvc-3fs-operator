@@ -176,6 +176,37 @@ func (r *ThreeFsClusterReconciler) RenderMainConfigPhase2(monConfig *monitor.Mon
 	return nil
 }
 
+func RenderAdminConfig(deviceFilter []string) error {
+	adminTempConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSAdminCliMainTmp)
+	adminConfigPath := filepath.Join(constant.DefaultConfigPath, constant.ThreeFSAdminCliMain)
+	os.RemoveAll(adminConfigPath)
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf("\"%s\"", deviceFilter[i])
+	}
+	if _, err := os.Stat(adminConfigPath); os.IsNotExist(err) {
+		mcfile, err := os.OpenFile(adminConfigPath, os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return err
+		}
+		defer mcfile.Close()
+
+		tmpl, err := template.New(constant.ThreeFSAdminCliMainTmp).ParseFiles(adminTempConfigPath)
+		if err != nil {
+			return err
+		}
+
+		maps := map[string]string{
+			"device_filter": strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(deviceFilter, ", ")), "\"\"", "\""),
+		}
+		mcfile.Seek(0, io.SeekStart)
+		return tmpl.Execute(mcfile, maps)
+	}
+	return nil
+}
+
 func (r *ThreeFsClusterReconciler) RenderFdbConfig(fdbconfig *fdb.FdbConfig) error {
 	content, err := fdbconfig.GetConfigContent()
 	if err != nil {

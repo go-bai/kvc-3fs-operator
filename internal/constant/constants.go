@@ -84,8 +84,9 @@ const (
 )
 
 const (
-	ThreeFSAdminCliMain = "admin_cli.toml"
-	ThreeFSMonitorMain  = "monitor_collector_main.toml"
+	ThreeFSAdminCliMain    = "admin_cli.toml"
+	ThreeFSAdminCliMainTmp = "admin_cli_temp.toml"
+	ThreeFSMonitorMain     = "monitor_collector_main.toml"
 
 	ThreeFSMetaMain     = "meta_main.toml"
 	ThreeFSMetaTempMain = "meta_main_temp.toml"

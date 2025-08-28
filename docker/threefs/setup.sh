@@ -21,17 +21,21 @@ case "$COMPONENT" in
     echo "CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}"
     echo "TCP_PORT: ${TCP_PORT}"
     echo "CLICKHOUSE_USER: ${CLICKHOUSE_USER}"
+    echo "DEVICE_FILTER": ${DEVICE_FILTER}
     sed -i "s|\${CLICKHOUSE_HOST}|${CLICKHOUSE_HOST}|g" /opt/3fs/etc/monitor_collector_main.toml
     sed -i "s|\${CLICKHOUSE_PASSWORD}|${CLICKHOUSE_PASSWORD}|g" /opt/3fs/etc/monitor_collector_main.toml
     sed -i "s|\${TCP_PORT}|${TCP_PORT}|g" /opt/3fs/etc/monitor_collector_main.toml
     sed -i "s|\${CLICKHOUSE_USER}|${CLICKHOUSE_USER}|g" /opt/3fs/etc/monitor_collector_main.toml
+    sed -i "s|\${DEVICE_FILTER}|${DEVICE_FILTER}|g" /opt/3fs/etc/monitor_collector_main.toml
 
     /opt/3fs/bin/monitor_collector_main --cfg /opt/3fs/etc/monitor_collector_main.toml
     ;;
   mgmtd)
     echo "starting mgmtd..."
+    echo "DEVICE_FILTER": ${DEVICE_FILTER}
     echo "$FDB_CLUSTER_FILE_CONTENTS" > /opt/3fs/etc/fdb.cluster
     sed -i "s|\${NODE_ID}|${NODE_ID}|g" /opt/3fs/etc/mgmtd_main_app.toml
+    sed -i "s|\${DEVICE_FILTER}|${DEVICE_FILTER}|g" /opt/3fs/etc/mgmtd_main_launcher.toml
 
     /opt/3fs/bin/mgmtd_main --launcher_cfg /opt/3fs/etc/mgmtd_main_launcher.toml \
     --app-cfg /opt/3fs/etc/mgmtd_main_app.toml
@@ -39,25 +43,34 @@ case "$COMPONENT" in
   meta)
     echo "starting meta..."
     echo "MGMTD_SERVER_ADDRESS: ${MGMTD_SERVER_ADDRESS}"
+    echo "DEVICE_FILTER": ${DEVICE_FILTER}
     echo "$FDB_CLUSTER_FILE_CONTENTS" > /opt/3fs/etc/fdb.cluster
     sed -i "s|\${NODE_ID}|${NODE_ID}|g" /opt/3fs/etc/meta_main_app.toml
     sed -i "s|\${MGMTD_SERVER_ADDRESS}|${MGMTD_SERVER_ADDRESS}|g" /opt/3fs/etc/meta_main_launcher.toml
+    sed -i "s|\${DEVICE_FILTER}|${DEVICE_FILTER}|g" /opt/3fs/etc/meta_main_launcher.toml
 
     /opt/3fs/bin/meta_main --launcher_cfg /opt/3fs/etc/meta_main_launcher.toml \
     --app-cfg /opt/3fs/etc/meta_main_app.toml
     ;;
   storage)
     echo "starting storage..."
+    echo "MGMTD_SERVER_ADDRESS: ${MGMTD_SERVER_ADDRESS}"
+    echo "DEVICE_FILTER": ${DEVICE_FILTER}
     sed -i "s|\${NODE_ID}|${NODE_ID}|g" /opt/3fs/etc/storage_main_app.toml
     sed -i "s|\${MGMTD_SERVER_ADDRESS}|${MGMTD_SERVER_ADDRESS}|g" /opt/3fs/etc/storage_main_launcher.toml
+    sed -i "s|\${DEVICE_FILTER}|${DEVICE_FILTER}|g" /opt/3fs/etc/storage_main_launcher.toml
 
     /opt/3fs/bin/storage_main --launcher_cfg /opt/3fs/etc/storage_main_launcher.toml \
     --app-cfg /opt/3fs/etc/storage_main_app.toml
     ;;
   fuse)
     echo "starting fuse..."
+    echo "MOUNT_POINT: ${MOUNT_POINT}"
+    echo "MGMTD_SERVER_ADDRESS: ${MGMTD_SERVER_ADDRESS}"
+    echo "DEVICE_FILTER": ${DEVICE_FILTER}
     sed -i "s|\${MOUNT_POINT}|${MOUNT_POINT}|g" /opt/3fs/etc/hf3fs_fuse_main_launcher.toml
     sed -i "s|\${MGMTD_SERVER_ADDRESS}|${MGMTD_SERVER_ADDRESS}|g" /opt/3fs/etc/hf3fs_fuse_main_launcher.toml
+    sed -i "s|\${DEVICE_FILTER}|${DEVICE_FILTER}|g" /opt/3fs/etc/hf3fs_fuse_main_launcher.toml
 
     mkdir -p ${MOUNT_POINT}
     mkdir -p /opt/3fs/token/

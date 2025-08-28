@@ -15,6 +15,7 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"strings"
 )
 
 type StorageConfig struct {
@@ -29,9 +30,19 @@ type StorageConfig struct {
 	DsConfig       *native_resources.DsConfig
 	Deploys        map[string]*native_resources.DelpoyConfig
 	rclient        client.Client
+	DeviceFilter   []string
 }
 
-func NewStorageConfig(name, namespace string, nodes []string, mgmtdAddress string, rdmaPort, tcpPort int, targetPaths []string, resources corev1.ResourceRequirements, rclient client.Client) *StorageConfig {
+func NewStorageConfig(name, namespace string, nodes []string, mgmtdAddress string, rdmaPort,
+	tcpPort int, targetPaths []string, resources corev1.ResourceRequirements, rclient client.Client,
+	deviceFilter []string) *StorageConfig {
+
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf("\"%s\"", deviceFilter[i])
+	}
 
 	deploys := make(map[string]*native_resources.DelpoyConfig)
 	for _, node := range nodes {
@@ -50,6 +61,7 @@ func NewStorageConfig(name, namespace string, nodes []string, mgmtdAddress strin
 		DsConfig:       native_resources.NewDsConfig(),
 		Deploys:        deploys,
 		rclient:        rclient,
+		DeviceFilter:   deviceFilter,
 	}
 }
 
@@ -385,6 +397,10 @@ func (mc *StorageConfig) WithDeployContainers(nodeName string) *StorageConfig {
 		{
 			Name:  "MGMTD_SERVER_ADDRESS",
 			Value: mc.MgmtdAddresses,
+		},
+		{
+			Name:  "DEVICE_FILTER",
+			Value: strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(mc.DeviceFilter, ", ")), "\"\"", "\""),
 		},
 	}
 

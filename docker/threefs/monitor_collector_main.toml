@@ -4,7 +4,7 @@ cluster_id = 'stage'
 [common.ib_devices]
 allow_unknown_zone = true
 default_network_zone = 'UNKNOWN'
-device_filter = []
+device_filter = ${DEVICE_FILTER}
 subnets = []
 
 [[common.log.categories]]

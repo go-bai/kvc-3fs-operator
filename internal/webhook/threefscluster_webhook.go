@@ -89,6 +89,13 @@ func (r *ThreeFsClusterDefaulter) PatchSidecarContainer(pod *corev1.Pod, mountpa
 	if mgmtdAddress == "" || !strings.Contains(mgmtdAddress, "RDMA") {
 		return fmt.Errorf("get mgmtd address failed")
 	}
+	deviceFilter := threeFsCluster.Spec.DeviceFilter
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf(`"%s"`, deviceFilter[i])
+	}
 	envs := []corev1.EnvVar{
 		{
 			Name:  "COMPONENT",
@@ -105,6 +112,10 @@ func (r *ThreeFsClusterDefaulter) PatchSidecarContainer(pod *corev1.Pod, mountpa
 		{
 			Name:  "TOKEN",
 			Value: tokenConfig.Data["token"],
+		},
+		{
+			Name:  "DEVICE_FILTER",
+			Value: strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(deviceFilter, ", ")), "\"\"", "\""),
 		},
 	}
 
@@ -178,6 +189,9 @@ func (r *ThreeFsClusterDefaulter) PatchSidecarContainer(pod *corev1.Pod, mountpa
 	}
 
 	containers := append([]corev1.Container{*cc.Container}, pod.Spec.Containers...)
+	if utils.GetUseHostNetworkEnv() {
+		pod.Spec.HostNetwork = true
+	}
 	pod.Spec.Containers = containers
 	terminatingTimeout := int64(60)
 	if pod.Spec.TerminationGracePeriodSeconds == nil {

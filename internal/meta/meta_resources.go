@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type MetaConfig struct {
@@ -31,9 +32,20 @@ type MetaConfig struct {
 	Deploys        map[string]*native_resources.DelpoyConfig
 	DsConfig       *native_resources.DsConfig
 	rclient        client.Client
+	DeviceFilter   []string
 }
 
-func NewMetaConfig(name, namespace string, nodes []string, mgmtdAddress string, rdmaPort, TcpPort, replica int, resources corev1.ResourceRequirements, fdbConfig *fdb.FdbConfig, rclient client.Client) *MetaConfig {
+func NewMetaConfig(name, namespace string, nodes []string, mgmtdAddress string, rdmaPort, TcpPort,
+	replica int, resources corev1.ResourceRequirements, fdbConfig *fdb.FdbConfig, rclient client.Client,
+	deviceFilter []string) *MetaConfig {
+
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf("\"%s\"", deviceFilter[i])
+	}
+
 	deploys := make(map[string]*native_resources.DelpoyConfig)
 	for _, node := range nodes {
 		deploys[node] = native_resources.NewDeployConfig()
@@ -53,6 +65,7 @@ func NewMetaConfig(name, namespace string, nodes []string, mgmtdAddress string, 
 		Deploys:        deploys,
 		DsConfig:       native_resources.NewDsConfig(),
 		rclient:        rclient,
+		DeviceFilter:   deviceFilter,
 	}
 }
 
@@ -395,6 +408,10 @@ func (mc *MetaConfig) WithDeployContainers(nodeName string) *MetaConfig {
 		{
 			Name:  "MGMTD_SERVER_ADDRESS",
 			Value: mc.MgmtdAddresses,
+		},
+		{
+			Name:  "DEVICE_FILTER",
+			Value: strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(mc.DeviceFilter, ", ")), "\"\"", "\""),
 		},
 	}
 

@@ -16,6 +16,7 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+	"strings"
 )
 
 type MonitorConfig struct {
@@ -30,16 +31,23 @@ type MonitorConfig struct {
 	SvcConfig    *native_resources.ServiceConfig
 	rclient      client.Client
 	FilterList   []string
+	DeviceFilter []string
 }
 
 func NewMonitorConfig(name, namespace string, nodes []string, isEcs bool, port int,
 	resources corev1.ResourceRequirements, rclient client.Client, chConfig *clickhouse.ClickhouseConfig,
-	filterList []string) *MonitorConfig {
+	filterList []string, deviceFilter []string) *MonitorConfig {
 	if filterList == nil {
 		filterList = make([]string, 0)
 	}
 	for i := 0; i < len(filterList); i++ {
 		filterList[i] = fmt.Sprintf(`"%s"`, filterList[i])
+	}
+	if deviceFilter == nil {
+		deviceFilter = make([]string, 0)
+	}
+	for i := 0; i < len(deviceFilter); i++ {
+		deviceFilter[i] = fmt.Sprintf(`"%s"`, deviceFilter[i])
 	}
 	return &MonitorConfig{
 		Name:         name,
@@ -53,6 +61,7 @@ func NewMonitorConfig(name, namespace string, nodes []string, isEcs bool, port i
 		SvcConfig:    native_resources.NewServiceConfig(),
 		rclient:      rclient,
 		FilterList:   filterList,
+		DeviceFilter: deviceFilter,
 	}
 }
 
@@ -342,10 +351,14 @@ func (mc *MonitorConfig) WithContainers() *MonitorConfig {
 			Name:  "COMPONENT",
 			Value: "monitor",
 		},
-		//{
-		//	Name:  "FILTER_LIST",
-		//	Value: fmt.Sprintf(`[%s]`, strings.Join(mc.FilterList, ", ")),
-		//},
+		{
+			Name:  "FILTER_LIST",
+			Value: fmt.Sprintf(`[%s]`, strings.Join(mc.FilterList, ", ")),
+		},
+		{
+			Name:  "DEVICE_FILTER",
+			Value: strings.ReplaceAll(fmt.Sprintf(`[%s]`, strings.Join(mc.DeviceFilter, ", ")), "\"\"", "\""),
+		},
 	}
 
 	volumeMount := []corev1.VolumeMount{

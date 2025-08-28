@@ -106,7 +106,8 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		threeFsCluster.Spec.Clickhouse.Resources, r.Client)
 	monConfig := monitor.NewMonitorConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Spec.Clickhouse.Nodes, threeFsCluster.Spec.Clickhouse.UseEcsClickhouse,
-		threeFsCluster.Spec.Monitor.Port, threeFsCluster.Spec.Monitor.Resources, r.Client, chCongig, threeFsCluster.Spec.FilterList)
+		threeFsCluster.Spec.Monitor.Port, threeFsCluster.Spec.Monitor.Resources, r.Client,
+		chCongig, threeFsCluster.Spec.FilterList, threeFsCluster.Spec.DeviceFilter)
 
 	fdbConfig := fdb.NewFdbConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Spec.Fdb.StorageReplicas, threeFsCluster.Spec.Fdb.ClusterSize,
@@ -115,8 +116,8 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	storageConfig := storage.NewStorageConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Status.NodesInfo.StorageNodes, "", threeFsCluster.Spec.Storage.RdmaPort,
-		threeFsCluster.Spec.Storage.TcpPort,
-		threeFsCluster.Spec.Storage.TargetPaths, threeFsCluster.Spec.Storage.Resources, r.Client)
+		threeFsCluster.Spec.Storage.TcpPort, threeFsCluster.Spec.Storage.TargetPaths,
+		threeFsCluster.Spec.Storage.Resources, r.Client, threeFsCluster.Spec.DeviceFilter)
 
 	if threeFsCluster.DeletionTimestamp == nil {
 		// check fdb node label and change fdb nodes
@@ -142,7 +143,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	mgmtdConfig := mgmtd.NewMgmtdConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Status.NodesInfo.StorageNodes, threeFsCluster.Spec.Mgmtd.RdmaPort, threeFsCluster.Spec.Mgmtd.TcpPort,
-		threeFsCluster.Spec.Mgmtd.Replica, threeFsCluster.Spec.Fdb.Resources, fdbConfig, r.Client)
+		threeFsCluster.Spec.Mgmtd.Replica, threeFsCluster.Spec.Fdb.Resources, fdbConfig, r.Client, threeFsCluster.Spec.DeviceFilter)
 	// client related config
 	fdbcliConfig := clientcomm.NewFdbCliConfig(constant.DefaultThreeFSFdbConfigPath,
 		threeFsCluster.Spec.Fdb.StorageReplicas, threeFsCluster.Spec.Fdb.CoordinatorNum, r.RESTClient)
@@ -188,7 +189,7 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	metaConfig := meta.NewMetaConfig(threeFsCluster.Name, threeFsCluster.Namespace,
 		threeFsCluster.Status.NodesInfo.StorageNodes, mgmtdAddresses,
 		threeFsCluster.Spec.Meta.RdmaPort, threeFsCluster.Spec.Meta.TcpPort, threeFsCluster.Spec.Meta.Replica,
-		threeFsCluster.Spec.Meta.Resources, fdbConfig, r.Client)
+		threeFsCluster.Spec.Meta.Resources, fdbConfig, r.Client, threeFsCluster.Spec.DeviceFilter)
 	storageConfig.MgmtdAddresses = mgmtdAddresses
 	adminCliConfig := clientcomm.NewAdminCli(mgmtdAddresses,
 		filepath.Join(constant.DefaultConfigPath, constant.ThreeFSAdminCliMain))
@@ -338,6 +339,10 @@ func (r *ThreeFsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		klog.Infof("fdb configmap & deploy created")
+
+		if err := RenderAdminConfig(threeFsCluster.Spec.DeviceFilter); err != nil {
+			return ctrl.Result{}, err
+		}
 
 		if err := r.RenderMainConfigPhase1(monConfig, fdbConfig, mgmtdConfig, threeFsCluster.Spec.FilterList); err != nil {
 			return ctrl.Result{}, err
