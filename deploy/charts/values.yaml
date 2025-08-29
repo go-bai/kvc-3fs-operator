@@ -18,19 +18,19 @@ clickhouse:
   image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/clickhouse:25.1-jammy-20250411
 
 monitor:
-  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:20250520-test
+  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device-op1
 
 mgmtd:
-  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:20250520-test
+  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device-op1
 
 fdb:
   image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/fdb:20250504
 
 meta:
-  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:20250520-test
+  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device-op1
 
 storage:
-  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:20250520-test
+  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device-op1
 
 fuse:
-  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:test0623-fuse
+  image: vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device-op1
