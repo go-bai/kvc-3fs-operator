@@ -35,12 +35,14 @@ spec:
     rdmaPort: 8002
     tcpPort: 9002
     replica: 2 # 数据多副本
-    targetPaths:
+    targetPaths: # 理论上这里每个挂载路径对应一个独立的 nvme 磁盘
       - "/storage/data0/3fs"
       - "/storage/data1/3fs"
       - "/storage/data2/3fs"
       - "/storage/data3/3fs"
-    targetPerDisk: 16
+    # 作用: 并发提升, 通过在单块物理盘上创建多个 Target, 可以增加并发队列的数量, 充分利用高性能  NVMe SSD 的 IO 深度
+    # Chain 的构建: 3fs 将不同节点上的 Target 组合成 Chain (复制组), Target 数量越多, 能组成的 Chain 就越多, 允许的 StripeSize 也就越大
+    targetPerDisk: 16 # 表示在每个 targetPath 下逻辑上划分出多少个 Target, Target 是存储服务的最小管理单元, 可以理解成磁盘上的分区或分片(目录形式存在)
     resources:
       limits:
         cpu: "4"

@@ -1,4 +1,4 @@
-FROM vcns-registry.cn-hangzhou.cr.aliyuncs.com/vcns/3fs:0828-multi-device
+FROM ghcr.io/go-bai/vcns/3fs:0828-multi-device
 
 COPY ./docker/threefs/setup.sh /
 COPY ./docker/threefs/ibdev2netdev /usr/sbin/ibdev2netdev
